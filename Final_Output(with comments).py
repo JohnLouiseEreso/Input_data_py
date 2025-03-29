@@ -793,6 +793,11 @@ def main():
                             command=show_data)
     save_button.pack(pady=30)
 
+    # Exit Button - Closes the application
+    exit_button = tk.Button(welcome_screen, text="Exit", font=("Arial", 12, "bold"),
+                            bg="red", fg="white", command=root.quit)
+    exit_button.pack(pady=10)  # Adjust padding as needed
+
     # ===================== Budget Input Screen =====================
     budget_screen = tk.Frame(root, bg="purple")
 
