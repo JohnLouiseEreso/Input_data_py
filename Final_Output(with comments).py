@@ -1,4 +1,3 @@
-
 import tkinter as tk
 from tkinter import ttk, messagebox
 from tkcalendar import DateEntry
@@ -728,6 +727,122 @@ def show_data():
 
     fetch_data()
 
+
+    # Function to show details for a selected date
+    def show_expenses_for_date(event):
+        selected_item = tree.focus()
+        if not selected_item:
+            return
+
+        values = tree.item(selected_item, "values")
+        if not values:
+            return
+
+        selected_date = values[0]
+        details_window = tk.Toplevel(data_window)
+        details_window.title(f"Expenses on {selected_date}")
+        details_window.geometry("800x800")
+        details_window.configure(bg="white")
+
+        # Treeview to show details
+        detail_tree = ttk.Treeview(details_window, columns=("Category", "Item", "Amount", "Total Spent"), show="headings")
+        detail_tree.heading("Category", text="Category")
+        detail_tree.heading("Item", text="Item")
+        detail_tree.heading("Amount", text="Amount")
+        detail_tree.heading("Total Spent", text="Total Spent")
+        detail_tree.pack(fill="both", expand=True)
+
+        # Fetch expenses for the selected date
+        conn = sqlite3.connect("input.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT category, item, amount, total_spent FROM expenses WHERE date = ?", (selected_date,))
+        records = cursor.fetchall()
+        conn.close()
+
+
+        for record in records:
+            detail_tree.insert("", "end", values=record)
+
+
+        # Show the pie chart below
+        show_pie_chart(details_window, selected_date)
+
+
+    # Function to delete all records for a selected date
+    def delete_selected_date():
+        selected_item = tree.focus()
+        if not selected_item:
+            messagebox.showwarning("Warning", "Please select a date to delete.")
+            return
+
+
+        values = tree.item(selected_item, "values")
+        if not values:
+            return
+
+
+        selected_date = values[0]
+
+
+        confirm = messagebox.askyesno("Confirm Deletion", f"Are you sure you want to delete all expenses for {selected_date}?")
+        if confirm:
+            conn = sqlite3.connect("input.db")
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM expenses WHERE date = ?", (selected_date,))
+            conn.commit()
+            conn.close()
+
+
+            # Remove from the treeview
+            tree.delete(selected_item)
+
+
+            print(f"Deleted all expenses for {selected_date}.")
+            messagebox.showinfo("Deleted", f"All expenses for {selected_date} have been deleted.")
+
+
+    # Function to display pie chart inside details window
+    def show_pie_chart(window, selected_date):
+        conn = sqlite3.connect("input.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT category, SUM(amount) FROM expenses WHERE date = ? GROUP BY category", (selected_date,))
+        data = cursor.fetchall()
+        conn.close()
+
+
+        if not data:
+            return  # No data to show
+
+
+        labels = [str(row[0]) for row in data]
+        sizes = [row[1] for row in data]
+
+
+        fig, ax = plt.subplots(figsize=(4, 4))
+        ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140, colors=['#ff9999', '#66b3ff', '#99ff99', '#ffcc99'])
+        ax.set_title(f"Expense Distribution on {selected_date}")
+
+
+        canvas = FigureCanvasTkAgg(fig, master=window)
+        canvas.draw()
+        canvas.get_tk_widget().pack(pady=10)
+
+
+    # Bind Treeview click event to open details window
+    tree.bind("<ButtonRelease-1>", show_expenses_for_date)
+
+
+    # Delete button
+    delete_button = tk.Button(data_window, text="Delete Selected Date", command=delete_selected_date, bg="red", fg="white")
+    delete_button.pack(pady=5)
+
+
+    data_window.mainloop()
+
+
+
+# Initialize the database
+initialize_database()
 
 
 from datetime import datetime
